@@ -1,110 +1,90 @@
-# Graph-Based-File-Management
+# Distributed Graph Database System
 
 ## Overview
 
-This project simulates a distributed graph database system designed to handle client requests through various components, including a load balancer, primary server, secondary servers, a cleanup process, and multiple clients. The system supports both read and write operations on graph data, with a focus on multithreading and inter-process communication (IPC) using message queues and shared memory.
+This assignment involves simulating a distributed graph database system with the following components:
+
+- **Load Balancer**: Distributes client requests to the appropriate servers.
+- **Primary Server**: Handles write operations (adding or modifying graphs).
+- **Secondary Servers**: Handle read operations (DFS/BFS traversals).
+- **Cleanup Process**: Manages the shutdown of the system.
+
+## System Architecture
+
+1. **Clients**: Send requests to the Load Balancer.
+2. **Load Balancer**: Forwards requests to the Primary Server (write operations) or Secondary Servers (read operations).
+3. **Primary Server**: Updates graph files based on client requests.
+4. **Secondary Servers**: Perform DFS/BFS traversals on graph files.
+5. **Cleanup Process**: Initiates the shutdown of all components.
 
 ## Components
 
-### 1. Load Balancer (`load_balancer.c`)
+### Graph Database
 
-- **Function**: Receives client requests and distributes them to the appropriate servers.
-- **Details**:
-  - Uses a single message queue for communication.
-  - Forwards write requests to the primary server.
-  - Distributes read requests between two secondary servers based on request number (odd/even).
+- Graph files are named `Gx.txt`, where `x` is a number (e.g., `G1.txt`).
+- Each file contains:
+  - A single integer `n` representing the number of nodes.
+  - An `n x n` adjacency matrix.
 
-### 2. Primary Server (`primary_server.c`)
+### Client Process
 
-- **Function**: Handles write operations for adding or modifying graph files.
-- **Details**:
-  - Processes write requests using threads.
-  - Reads graph data from shared memory and updates files accordingly.
-  - Responds to clients with status messages.
+- Options:
+  1. Add a new graph to the database
+  2. Modify an existing graph
+  3. Perform DFS on an existing graph
+  4. Perform BFS on an existing graph
+- Requests are sent to the Load Balancer using a single message queue.
+- For write operations, clients also write graph data to a shared memory segment.
+- For read operations, clients specify a starting vertex for traversal.
 
-### 3. Secondary Servers (`secondary_server.c`)
+### Load Balancer
 
-- **Function**: Handles read operations, including DFS and BFS traversals.
-- **Details**:
-  - Each server spawns threads for processing client requests.
-  - Performs concurrent traversals of acyclic graphs as specified by the client.
-  - Sends traversal results back to the client via the message queue.
+- Receives requests from clients via a single message queue.
+- Forwards:
+  - Write requests to the Primary Server.
+  - Odd-numbered read requests to Secondary Server 1.
+  - Even-numbered read requests to Secondary Server 2.
 
-### 4. Cleanup Process (`cleanup.c`)
+### Primary Server
 
-- **Function**: Manages the termination of the system.
-- **Details**:
-  - Monitors for a termination request from the user.
-  - Signals the load balancer to shut down, which then informs all servers.
-  - Ensures proper cleanup and termination of all processes.
+- Handles write requests (add or modify graph files).
+- Creates a thread to process each request.
+- Updates graph files based on client-provided data.
 
-### 5. Client
+### Secondary Servers
 
-- **Function**: Interacts with the system to send requests and receive responses.
-- **Details**:
-  - Options include adding/modifying graphs and performing DFS/BFS traversals.
-  - Uses shared memory for data transfer and the message queue for receiving responses.
-  - Handles input prompts and displays results.
+- Handle read requests (DFS/BFS traversals).
+- Each read request is processed by a thread.
+- DFS uses a new thread for each unvisited node, ensuring depth-wise traversal.
+- BFS processes nodes level by level, creating threads for nodes at each level.
 
-## Graph File Format
+### Cleanup Process
 
-Graph files follow the naming convention `Gx.txt`, where `x` is a number. Each file contains:
-- An integer `n` specifying the number of nodes in the graph.
-- An `n x n` adjacency matrix where each row represents a node and its edges.
+- Displays a menu to terminate the application.
+- Signals the Load Balancer to start the shutdown sequence.
+- Waits for the Load Balancer to terminate all components before exiting.
 
-### Sample Graph File
+## Running the Processes
 
-4
-0 1 0 1
-1 0 1 0
-0 1 0 1
-1 0 1 0
+1. **Start the Load Balancer Process**.
+2. **Start Two Instances of the Secondary Server**:
+   - Secondary Server 1
+   - Secondary Server 2
+3. **Start the Primary Server Process**.
+4. **Start the Cleanup Process**.
 
-r
-Copy code
+## Client Interaction
 
-## Instructions
+Clients can interact with the system by choosing from the following options:
 
-### Compilation
+1. **Add a New Graph**: Sends graph data to the Primary Server.
+2. **Modify an Existing Graph**: Updates an existing graph file.
+3. **Perform DFS**: Executes a Depth-First Search traversal on a graph.
+4. **Perform BFS**: Executes a Breadth-First Search traversal on a graph.
 
-Compile all C files using a POSIX-compliant compiler:
+## Termination
 
-```bash
-gcc -o load_balancer load_balancer.c -lpthread
-gcc -o primary_server primary_server.c -lpthread
-gcc -o secondary_server secondary_server.c -lpthread
-gcc -o cleanup cleanup.c -lpthread
-Execution
-Start the Load Balancer:
-
-bash
-Copy code
-./load_balancer
-Start the Secondary Servers:
-
-bash
-Copy code
-./secondary_server 1
-./secondary_server 2
-Start the Primary Server:
-
-bash
-Copy code
-./primary_server
-Start the Cleanup Process:
-
-bash
-Copy code
-./cleanup
-Client Interaction
-Clients interact with the system by choosing from the following options:
-
-Add a New Graph: Sends graph data to the primary server.
-Modify an Existing Graph: Updates an existing graph file.
-Perform DFS: Executes a Depth-First Search traversal on a graph.
-Perform BFS: Executes a Breadth-First Search traversal on a graph.
-Termination
 To terminate the system:
 
-Use the cleanup process to signal the load balancer.
-The load balancer will notify all servers to shut down and clean up resources.
+1. **Use the Cleanup Process** to signal the Load Balancer.
+2. The **Load Balancer** will then initiate the shutdown sequence for all components.
